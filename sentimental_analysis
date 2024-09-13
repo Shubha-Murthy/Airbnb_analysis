@@ -1,0 +1,92 @@
+https://colab.research.google.com/drive/16I0tElkspTdrsKXQXrQU1R8pBeBhVPMJ?usp=sharing
+#analysis begin
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from wordcloud import WordCloud
+import warnings
+warnings.filterwarnings('ignore')
+df=pd.read_csv("/content/drive/MyDrive/AirBNBReviews.csv")
+df
+df.head(10)
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import nltk
+from nltk.stem import PorterStemmer
+nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('wordnet')
+stop_words = set(stopwords.words('english'))
+df.isna().sum()
+df
+df.rename(columns={'Positive or Negative': 'Result'},inplace=True)
+df
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import nltk
+#Import the PorterStemmer class
+from nltk.stem import PorterStemmer 
+nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('wordnet')
+stop_words = set(stopwords.words('english'))
+
+def preprocess_text(text):
+    # Check if text is a string 
+    if isinstance(text, str):
+        # Tokenize the text
+        tokens = nltk.word_tokenize(text.lower())
+
+        # Remove stop words
+        stop_words = set(stopwords.words('english'))
+        tokens = [word for word in tokens if word not in stop_words]
+
+        stemmer = PorterStemmer()
+        stemmed_tokens = [stemmer.stem(word) for word in tokens]
+
+        return stemmed_tokens
+    else:
+        # Handle non-string values (e.g., return an empty list for NaN)
+        return []
+
+df['preprocessed_text'] = df['Review'].apply(preprocess_text)
+df
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# Create TF-IDF vectors
+vectorizer = TfidfVectorizer()
+
+# Join the tokens back into a string for each document
+df['preprocessed_text'] = df['preprocessed_text'].apply(lambda tokens: ' '.join(tokens))
+
+# Add a check to handle empty documents
+if df['preprocessed_text'].apply(lambda x: len(x)).sum() == 0:
+    # Handle the case of empty documents, e.g., skip TF-IDF or assign a default value
+    print("Empty documents found. Skipping TF-IDF.")
+else:
+    # Add a try-except block to catch the ValueError 
+    try:
+        tfidf_matrix = vectorizer.fit_transform(df['preprocessed_text'])
+    except ValueError:
+        # If the vocabulary is empty, print a message and investigate the data
+        print("Empty vocabulary encountered. Check the preprocessed text.")
+        # You might want to add further debugging here, like printing unique tokens
+        print(set(' '.join(df['preprocessed_text'].astype(str).tolist()).split()))
+
+df
+# Assuming you have an API endpoint for the summarization function
+import requests
+
+def get_summary(review):
+    url = 'https://your-api-endpoint/summarize'
+    df = {'review': review}
+    response = requests.post(url, json=df)
+    return response.json()['summary']
+# Convert all values in the 'Review' column to strings before joining
+text_corpus = ' '.join(str(val) for val in df['Review'].values)
+
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text_corpus)
+plt.figure(figsize=(10, 5))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis("off")
+plt.show()
